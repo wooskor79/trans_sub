@@ -31,8 +31,10 @@ async def fetch_gemini(session, api_key, model_name, prompt, idx, out_list):
             if r.status == 200:
                 data = await r.json()
                 text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+                # 혹시라도 모델이 또 원문을 뱉을 경우를 대비한 2차 방어선 (선택 사항)
                 out_list[idx] = text
                 return idx
+            return None
     except Exception:
         return None
 
@@ -60,15 +62,12 @@ async def translate_async(
             continue
 
         if polish_ko:
-            # 윤문 모드: 한글만 다듬기
             if is_korean(cleaned):
                 targets.append(i)
         else:
-            # 번역 모드: 한글이 아니면 전부 번역 (언어 자동 감지)
             if not is_korean(cleaned):
                 targets.append(i)
 
-    # 디버그용 (문제 생기면 바로 확인 가능)
     status.write(f"Gemini targets: {len(targets)}")
 
     if not targets:
@@ -85,40 +84,48 @@ async def translate_async(
                 next_ctx = "\n".join(texts[i + 1:i + 1 + GEMINI_CONTEXT])
 
                 if polish_ko:
-                    instruction = (
-                        "The current line is already Korean.\n"
-                        "Polish and refine it naturally for subtitles.\n"
-                        "Do NOT translate or change the meaning."
-                    )
-                else:
-                    instruction = (
-                        "Detect the language automatically.\n"
-                        "If the current line is NOT Korean, you MUST translate it into natural Korean.\n"
-                        "If it IS Korean, keep it unchanged."
-                    )
+                    prompt = f"""
+You are a professional subtitle editor.
+Refine the [TARGET] Korean line to be more natural.
 
-                prompt = f"""
-You are a professional subtitle translator.
-
-[ABSOLUTE RULES]
-- Output Korean only.
-- Subtitle style: short, natural spoken Korean.
-- Do NOT add explanations.
-- Do NOT keep foreign language if translation is required.
-
-[INSTRUCTION]
-{instruction}
-
-[PREVIOUS SUBTITLES]
+[CONTEXT BEFORE]
 {prev_ctx}
 
-[CURRENT LINE]
+[TARGET]
 {texts[i]}
 
-[NEXT SUBTITLES]
+[CONTEXT AFTER]
 {next_ctx}
 
-Korean subtitle only:
+Refined Korean:
+""".strip()
+                else:
+                    # [수정됨] 강력한 예시(Few-Shot) 기반 프롬프트
+                    prompt = f"""
+You are a professional subtitle translator.
+Translate the [TARGET] line into natural spoken Korean.
+
+[RULES]
+1. Output ONLY the Korean translation.
+2. NEVER output the original text.
+3. Translate names in parentheses phonetically (e.g., (Miyabi) -> (미야비)).
+
+[EXAMPLE]
+Input: (ミヤビ) おはよう
+Output: (미야비) 안녕
+Input: 毎日 少しずつ
+Output: 매일 조금씩
+
+[CONTEXT BEFORE]
+{prev_ctx}
+
+[TARGET]
+{texts[i]}
+
+[CONTEXT AFTER]
+{next_ctx}
+
+Korean Translation:
 """.strip()
 
                 tasks.append(
