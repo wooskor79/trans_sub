@@ -5,25 +5,36 @@ import torch
 import logging
 import warnings
 import langid
+from datetime import datetime
 
 # ======================
 # CONFIG & LOGGING
 # ======================
 def setup_logging():
-    # 1. Python 경고 차단
     warnings.filterwarnings("ignore")
     os.environ["TRANSFORMERS_VERBOSITY"] = "error"
     os.environ["TORCH_LOGS"] = "-all"
-
-    # 2. 로깅 레벨 강제 조정
+    
+    # Streamlit 및 기타 라이브러리 로그 강제 차단
     loggers_to_silence = [
         "streamlit", "streamlit.runtime.scriptrunner_utils.script_run_context",
         "streamlit.runtime.state.session_state_proxy", "git", "filelock", "fsspec", "urllib3",
     ]
     for logger_name in loggers_to_silence:
-        logger = logging.getLogger(logger_name)
-        logger.setLevel(logging.ERROR)
-        logger.propagate = False
+        l = logging.getLogger(logger_name)
+        l.setLevel(logging.ERROR)
+        l.propagate = False
+
+def get_now():
+    """현재 시간을 datetime 객체로 반환"""
+    return datetime.now()
+
+def format_duration(start_time, end_time):
+    """소요 시간을 분/초 형식으로 변환"""
+    duration = end_time - start_time
+    seconds = int(duration.total_seconds())
+    mins, secs = divmod(seconds, 60)
+    return f"{mins}분 {secs}초"
 
 # ======================
 # TEXT & SRT UTILS
@@ -64,9 +75,6 @@ def build_srt(rows):
         out.append("")
     return "\n".join(out)
 
-# ======================
-# SYSTEM UTILS
-# ======================
 def clear_vram():
     if torch.cuda.is_available():
         torch.cuda.empty_cache()

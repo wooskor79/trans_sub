@@ -1,6 +1,6 @@
 import streamlit as st
 import torch
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, BitsAndBytesConfig
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 import utils
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -8,11 +8,11 @@ MAX_NEW_TOKENS = 256
 
 @st.cache_resource
 def load_model(model_id):
-    bnb_config = BitsAndBytesConfig(load_in_8bit=True)
+    # 품질 최우선: 압축 없이 FP16 로드
     tok = AutoTokenizer.from_pretrained(model_id)
     mdl = AutoModelForSeq2SeqLM.from_pretrained(
         model_id,
-        quantization_config=bnb_config,
+        torch_dtype=torch.float16,
         device_map="auto",
         low_cpu_mem_usage=True
     )
@@ -23,9 +23,8 @@ def translate(rows, tok, mdl, status, file_info, file_idx, total_files):
     texts = [r[2] for r in rows]
     out = texts[:]
     todo_map = {}
-    translation_cache = {} # 로컬 캐시
+    translation_cache = {}
 
-    # 중복 제거 및 작업 목록 생성
     for i, t in enumerate(texts):
         cleaned = utils.clean_text(t)
         if not cleaned: continue
@@ -52,13 +51,12 @@ def translate(rows, tok, mdl, status, file_info, file_idx, total_files):
             for idx in todo_map[src]:
                 out[idx] = res
 
-        # UI 업데이트
         u_vram, t_vram = utils.get_vram_status()
         status.markdown(f"""
         <div style="background:#1e1e1e;padding:20px;border-radius:10px;border:1px solid #00ffcc;">
-        <h3 style="color:#00ffcc;">📊 NLLB 번역 중 (Batch 가속)</h3>
-        <p><b>파일:</b> {file_info} ({file_idx}/{total_files}) | <b>진행:</b> {p+len(batch_src)}/{len(unique_texts)}</p>
-        <p><b>VRAM:</b> {u_vram:.1f}/{t_vram:.1f}GB</p>
+        <h3 style="color:#00ffcc;">📊 NLLB 3.3B (FP16 High-Quality)</h3>
+        <p><b>파일:</b> {file_info} ({file_idx}/{total_files}) | <b>진행:</b> {min(p+len(batch_src), len(unique_texts))}/{len(unique_texts)}</p>
+        <p><b>VRAM:</b> {u_vram:.2f} / {t_vram:.2f} GB</p>
         <hr>
         <p style="color:#888;"><b>원문:</b> {utils.clean_text(batch_src[-1])}</p>
         <p style="color:#00ffcc;"><b>번역:</b> {utils.clean_text(results[-1])}</p>
