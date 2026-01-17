@@ -54,7 +54,7 @@ async def translate_async(
     targets = []
 
     # ======================
-    # 대상 선택
+    # 번역 대상 선택
     # ======================
     for i, t in enumerate(texts):
         cleaned = utils.clean_text(t)
@@ -62,11 +62,9 @@ async def translate_async(
             continue
 
         if polish_ko:
-            # 윤문: 한글만
             if is_korean(cleaned):
                 targets.append(i)
         else:
-            # 번역: 한글이 아니면 전부
             if not is_korean(cleaned):
                 targets.append(i)
 
@@ -88,15 +86,15 @@ async def translate_async(
                 if polish_ko:
                     instruction = (
                         "The CURRENT LINE is already Korean.\n"
-                        "Rewrite it to sound natural as a spoken subtitle.\n"
+                        "Polish it to sound natural as a subtitle.\n"
                         "Do NOT translate.\n"
-                        "Do NOT change the meaning."
+                        "Do NOT change meaning."
                     )
                 else:
                     instruction = (
                         "This is a TRANSLATION TASK.\n"
                         "If the CURRENT LINE is NOT Korean, you MUST translate it into Korean.\n"
-                        "If any non-Korean characters remain in the output, the task has FAILED.\n"
+                        "If any non-Korean characters remain, the task has FAILED.\n"
                         "Never repeat the original text."
                     )
 
