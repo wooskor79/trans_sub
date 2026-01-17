@@ -17,12 +17,15 @@ def setup_logging():
     
     # Streamlit 및 기타 라이브러리 로그 강제 차단
     loggers_to_silence = [
-        "streamlit", "streamlit.runtime.scriptrunner_utils.script_run_context",
-        "streamlit.runtime.state.session_state_proxy", "git", "filelock", "fsspec", "urllib3",
+        "streamlit", 
+        "streamlit.runtime.scriptrunner.script_run_context", # Critical for threading warnings
+        "streamlit.runtime.scriptrunner_utils.script_run_context",
+        "streamlit.runtime.state.session_state_proxy", 
+        "git", "filelock", "fsspec", "urllib3",
     ]
     for logger_name in loggers_to_silence:
         l = logging.getLogger(logger_name)
-        l.setLevel(logging.ERROR)
+        l.setLevel(logging.CRITICAL) # ERROR보다 더 높게 설정하여 완전 차단
         l.propagate = False
 
 def get_now():
