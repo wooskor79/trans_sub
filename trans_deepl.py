@@ -49,13 +49,22 @@ async def translate_async(rows, api_key, status, file_info, file_idx, total_file
         for idx, i in enumerate(targets):
             await fetch_deepl(session, api_key, texts[i], i, out, translation_cache)
             status.markdown(f"""
-            <div style="background:#1e1e1e;padding:20px;border-radius:10px;border:1px solid #ff9a9e;">
-            <h3 style="color:#ff9a9e;">🌐 DeepL 순차 번역 중</h3>
-            <p><b>파일:</b> {file_info} ({file_idx}/{total_files}) | <b>진행:</b> {idx+1}/{len(targets)}</p>
-            <hr>
-            <p style="color:#888;"><b>원문:</b> {utils.clean_text(texts[i])}</p>
-            <p style="color:#ff9a9e;"><b>결과:</b> {utils.clean_text(out[i])}</p>
+            <div style="background:#1e1e1e;padding:15px;border-radius:12px;border:1px solid #ff9a9e; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+                <h4 style="margin:0;color:#ff9a9e;">🌐 DeepL Pro Translation</h4>
+                <span style="background:#333;padding:4px 8px;border-radius:4px;font-size:0.8em;color:#eee;">{idx+1}/{len(targets)}</span>
+                <span style="background:#333;padding:4px 8px;border-radius:4px;font-size:0.8em;color:#eee;">File {file_idx}/{total_files}</span>
+            </div>
+            <div style="font-size:0.9em;color:#aaa;margin-bottom:5px;">📂 {file_info}</div>
+             <div style="background:#2d2d2d;padding:10px;border-radius:8px;margin-bottom:8px;">
+                <span style="color:#888;font-size:0.85em;">Original</span><br>
+                <span style="color:#eee;">{utils.clean_text(texts[i])}</span>
+            </div>
+            <div style="background:#263238;padding:10px;border-radius:8px;border-left:4px solid #ff9a9e;">
+                <span style="color:#ff9a9e;font-size:0.85em;">Translated</span><br>
+                <span style="color:#fff;font-weight:bold;">{utils.clean_text(out[i])}</span>
+            </div>
             </div>
             """, unsafe_allow_html=True)
-            await asyncio.sleep(0.05)
+            await asyncio.sleep(0.1)  # 429 방지 안정화 딜레이 약간 증가
     return out
